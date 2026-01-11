@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cyber Team App</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body{margin:0;font-family:monospace;background:#020617;color:#22c55e}
+header{background:#000;padding:10px;text-align:center}
+.card{background:#000;margin:10px;padding:10px;border-radius:6px}
+input,button{background:#020617;color:#22c55e;border:1px solid #22c55e;padding:6px;margin:4px}
+button{cursor:pointer}
+.hidden{display:none}
+.chat,.terminal{height:160px;overflow:auto;border:1px solid #22c55e;padding:5px}
+.msg{margin:2px}
+.admin{border:1px solid red}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>🛡️ CYBER TEAM APP</h2>
+</header>
+
+<!-- AUTH -->
+<div id="auth" class="card">
+<h3>LOGIN / SIGNUP</h3>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<br>
+<button onclick="signup()">Signup</button>
+<button onclick="login()">Login</button>
+<p id="authMsg"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash" class="hidden">
+
+<div class="card">
+<h3>Welcome <span id="userEmail"></span></h3>
+<button onclick="logout()">Logout</button>
+</div>
+
+<!-- CHAT -->
+<div class="card">
+<h4>💬 Secure Chat</h4>
+<div class="chat" id="chatBox"></div>
+<input id="chatInput" placeholder="message">
+<button onclick="sendMsg()">Send</button>
+</div>
+
+<!-- TOOLS -->
+<div class="card">
+<h4>🛡️ Cyber Tools</h4>
+<button onclick="passwordCheck()">Password Strength</button>
+<button onclick="vulnCheck()">Vulnerability Check</button>
+<button onclick="activity()">Activity Monitor</button>
+<p id="toolResult"></p>
+</div>
+
+<!-- TERMINAL -->
+<div class="card">
+<h4>🖥️ Cyber Terminal</h4>
+<div class="terminal" id="terminal"></div>
+<input id="cmd" placeholder="type command">
+<button onclick="runCmd()">Run</button>
+</div>
+
+<!-- NEWS -->
+<div class="card">
+<h4>📰 Cyber News</h4>
+<ul>
+<li>Phishing attacks increasing</li>
+<li>Enable 2FA everywhere</li>
+<li>Never share OTP</li>
+</ul>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="card admin hidden">
+<h4>👮 Admin Panel</h4>
+<p>Admin access enabled</p>
+</div>
+
+</div>
+
+<script>
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBA02VmEB6YyR7WhPnIPO6PNfXySCYpGuQ",
+  authDomain: "vcg-cyber.firebaseapp.com",
+  projectId: "vcg-cyber",
+  storageBucket: "vcg-cyber.firebasestorage.app",
+  messagingSenderId: "1074660994518",
+  appId: "1:1074660994518:web:308e78d472dda250f08877",
+  measurementId: "G-4GSFMLBLXM"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+// Elements
+const emailEl = document.getElementById("email");
+const passEl = document.getElementById("password");
+const authMsg = document.getElementById("authMsg");
+const chatInput = document.getElementById("chatInput");
+const chatBox = document.getElementById("chatBox");
+const terminal = document.getElementById("terminal");
+const cmd = document.getElementById("cmd");
+const toolResult = document.getElementById("toolResult");
+
+// AUTH
+function signup(){
+ auth.createUserWithEmailAndPassword(emailEl.value, passEl.value)
+ .then(()=>authMsg.innerText="Signup successful")
+ .catch(e=>authMsg.innerText=e.message);
+}
+
+function login(){
+ auth.signInWithEmailAndPassword(emailEl.value, passEl.value)
+ .catch(e=>authMsg.innerText=e.message);
+}
+
+function logout(){
+ auth.signOut().then(()=>location.reload());
+}
+
+// Auth state
+auth.onAuthStateChanged(u=>{
+ if(u){
+  auth.classList?.add("hidden");
+  document.getElementById("auth").classList.add("hidden");
+  document.getElementById("dash").classList.remove("hidden");
+  document.getElementById("userEmail").innerText=u.email;
+
+  if(u.email==="admin@cyber.com"){
+    document.getElementById("admin").classList.remove("hidden");
+  }
+
+  loadChat();
+ }else{
+  document.getElementById("auth").classList.remove("hidden");
+  document.getElementById("dash").classList.add("hidden");
+ }
+});
+
+// CHAT
+function sendMsg(){
+ if(!auth.currentUser || !chatInput.value.trim()) return;
+ db.collection("chat").add({
+  u: auth.currentUser.email,
+  t: chatInput.value.trim(),
+  time: firebase.firestore.FieldValue.serverTimestamp()
+ });
+ chatInput.value="";
+}
+
+function loadChat(){
+ db.collection("chat").orderBy("time")
+ .onSnapshot(s=>{
+  chatBox.innerHTML="";
+  s.forEach(d=>{
+   chatBox.innerHTML+=`<div class="msg">${d.data().u}: ${d.data().t}</div>`;
+  });
+  chatBox.scrollTop=chatBox.scrollHeight;
+ });
+}
+
+// TOOLS
+function passwordCheck(){toolResult.innerText="Strength: Medium"}
+function vulnCheck(){toolResult.innerText="No critical issues"}
+function activity(){toolResult.innerText="Monitoring active"}
+
+// TERMINAL
+function runCmd(){
+ let c=cmd.value.trim();
+ terminal.innerHTML+=`<div>$ ${c}</div>`;
+ if(c==="help")terminal.innerHTML+="<div>help, scan, status, clear</div>";
+ else if(c==="scan")terminal.innerHTML+="<div>Scan complete: SAFE</div>";
+ else if(c==="status")terminal.innerHTML+="<div>All systems running</div>";
+ else if(c==="clear")terminal.innerHTML="";
+ else terminal.innerHTML+="<div>command not found</div>";
+ cmd.value="";
+ terminal.scrollTop=terminal.scrollHeight;
+}
+</script>
+
+</body>
+</html>
